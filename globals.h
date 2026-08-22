@@ -15,6 +15,7 @@
 // =====================================================================================
 
 #include "config.h"
+#define FASTLED_ALLOW_INTERRUPTS 0
 #include <FastLED.h>
 #include <ESP32Time.h>
 #include <pgmspace.h>
