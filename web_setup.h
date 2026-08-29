@@ -76,6 +76,19 @@ void handleWeatherTest() {
   server.send(302, "text/plain", "");
 }
 
+void handleWeatherDebug() {
+  if (server.hasArg("weatherId")) {
+    int forcedId = server.arg("weatherId").toInt();
+    Serial.println("Test Météo forcé avec ID: " + String(forcedId));
+    currentWeatherId = forcedId;
+    resetDisplayModes();
+    weatherMode = true;
+    weatherStartTime = millis();
+  }
+  server.sendHeader("Location", "/status", true);
+  server.send(302, "text/plain", "");
+}
+
 // =====================================================================================
 //  Endpoints API REST (Pour Home Assistant, etc.)
 // =====================================================================================
@@ -257,9 +270,15 @@ void handleStatus() {
             "cursor:pointer; font-weight:bold; width:100%;\"></form>";
   footer += "<form action=\"/weathertest\" method=\"POST\" "
             "style=\"margin-bottom: 5px;\"><input type=\"submit\" value=\"🌤️ "
-            "Tester Animation Météo\" style=\"background-color:#3498db; "
+            "Tester Météo Actuelle\" style=\"background-color:#3498db; "
             "color:#fff; border:none; padding:10px 20px; border-radius:5px; "
             "cursor:pointer; font-weight:bold; width:100%;\"></form>";
+  footer += "<form action=\"/weatherdebug\" method=\"POST\" style=\"margin-bottom: 5px; display:flex; gap:5px;\">"
+            "<select name=\"weatherId\" style=\"flex:1; padding:10px; border-radius:5px; background:#444; color:#fff; border:1px solid #555; font-size:16px;\">"
+            "<option value=\"800\">☀️ Soleil</option><option value=\"802\">☁️ Nuages</option>"
+            "<option value=\"500\">🌧️ Pluie</option><option value=\"600\">❄️ Neige</option>"
+            "<option value=\"200\">🌩️ Orage</option><option value=\"741\">🌫️ Brouillard</option></select>"
+            "<input type=\"submit\" value=\"Débug Météo\" style=\"background-color:#f39c12; color:#fff; border:none; padding:10px; border-radius:5px; cursor:pointer; font-weight:bold;\"></form>";
   footer += "<form action=\"/chaser\" method=\"POST\" style=\"margin-bottom: "
             "5px;\"><input type=\"submit\" value=\"🔄 Lancer Chenillard\" "
             "style=\"background-color:#9c27b0; color:#fff; border:none; "
@@ -418,7 +437,20 @@ void handleRoot() {
         <hr>
         <h2>Tests & Animations</h2>
         <form action="/fireworks" method="POST" style="margin-bottom: 5px;"><input type="submit" value="🎆 Lancer Feu d'Artifice" style="background-color: #ff5722; width: 100%; border:none; padding:10px; border-radius:5px; color:#fff; cursor:pointer; font-weight:bold;"></form>
-        <form action="/weathertest" method="POST" style="margin-bottom: 5px;"><input type="submit" value="🌤️ Tester Animation Météo" style="background-color: #3498db; width: 100%; border:none; padding:10px; border-radius:5px; color:#fff; cursor:pointer; font-weight:bold;"></form>
+        <form action="/weathertest" method="POST" style="margin-bottom: 5px;"><input type="submit" value="🌤️ Tester Météo Actuelle" style="background-color: #3498db; width: 100%; border:none; padding:10px; border-radius:5px; color:#fff; cursor:pointer; font-weight:bold;"></form>
+        
+        <form action="/weatherdebug" method="POST" style="margin-bottom: 5px; display:flex; gap:5px;">
+            <select name="weatherId" style="flex:1; padding:10px; border-radius:5px; background:#444; color:#fff; border:1px solid #555; font-size:16px;">
+                <option value="800">☀️ Soleil</option>
+                <option value="802">☁️ Nuages</option>
+                <option value="500">🌧️ Pluie</option>
+                <option value="600">❄️ Neige</option>
+                <option value="200">🌩️ Orage</option>
+                <option value="741">🌫️ Brouillard</option>
+            </select>
+            <input type="submit" value="Débug Météo" style="background-color: #f39c12; border:none; padding:10px; border-radius:5px; color:#fff; cursor:pointer; font-weight:bold;">
+        </form>
+
         <form action="/chaser" method="POST" style="margin-bottom: 5px;"><input type="submit" value="🔄 Lancer Chenillard" style="background-color: #9c27b0; width: 100%; border:none; padding:10px; border-radius:5px; color:#fff; cursor:pointer; font-weight:bold;"></form>
         <form action="/pixeltest" method="POST" style="margin-bottom: 5px;"><input type="submit" value="🔍 Test Case par Case" style="background-color: #00bcd4; width: 100%; border:none; padding:10px; border-radius:5px; color:#fff; cursor:pointer; font-weight:bold;"></form>
         <form action="/clock" method="POST"><input type="submit" value="⏱️ Retour Mode Horloge" style="background-color: #4caf50; width: 100%; border:none; padding:10px; border-radius:5px; color:#fff; cursor:pointer; font-weight:bold;"></form>
@@ -553,6 +585,7 @@ void startAPMode() {
   server.on("/status", HTTP_GET, handleStatus);
   server.on("/fireworks", HTTP_POST, handleFireworks);
   server.on("/weathertest", HTTP_POST, handleWeatherTest);
+  server.on("/weatherdebug", HTTP_POST, handleWeatherDebug);
   server.on("/chaser", HTTP_POST, handleChaser);
   server.on("/pixeltest", HTTP_POST, handlePixelTest);
   server.on("/clock", HTTP_POST, handleClockMode);
@@ -621,6 +654,7 @@ void connectToWiFi() {
       server.on("/status", HTTP_GET, handleStatus);
       server.on("/fireworks", HTTP_POST, handleFireworks);
       server.on("/weathertest", HTTP_POST, handleWeatherTest);
+      server.on("/weatherdebug", HTTP_POST, handleWeatherDebug);
       server.on("/chaser", HTTP_POST, handleChaser);
       server.on("/pixeltest", HTTP_POST, handlePixelTest);
       server.on("/clock", HTTP_POST, handleClockMode);
