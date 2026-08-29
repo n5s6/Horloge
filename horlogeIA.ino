@@ -14,6 +14,7 @@
                          // FastLED
 
 #include "fireworks.h"
+#include "weather.h"
 #include "globals.h"
 #include "web_setup.h"
 
@@ -34,7 +35,17 @@ bool apModeActive = false;  // Mode Point d'Accès actif
 bool fireworksMode = false; // Animation feu d'artifice en cours
 bool chaserMode = false;    // Animation chenillard en cours
 bool pixelTestMode = false; // Test LED case par case en cours
+bool weatherMode = false;   // Animation météo en cours
 int testPixelIndex = 0;     // Index courant pour les animations de test
+
+// --- Drapeaux d'état (Météo)
+bool weatherEnabled = false;
+String weatherApiKey = "";
+String weatherCity = "";
+int currentWeatherId = 800; // Clair par défaut
+unsigned long lastWeatherSync = 0;
+unsigned long weatherStartTime = 0;
+bool weatherTriggeredThisHour = false;
 
 // --- Drapeaux d'état (Anniversaires)
 bool isBirthdayToday = false;
@@ -73,6 +84,11 @@ void setup() {
 
   // --- Charger la luminosité sauvegardée (ou valeur par défaut) ---
   brightness = preferences.getInt("brightness", 150);
+
+  // --- Charger les paramètres météo ---
+  weatherEnabled = preferences.getBool("weatherEnabled", false);
+  weatherApiKey = preferences.getString("weatherApiKey", "");
+  weatherCity = preferences.getString("weatherCity", "");
 
   // --- Charger les couleurs personnalisées (ou couleurs par défaut PROGMEM)
   // ---
@@ -184,7 +200,7 @@ void loop() {
     }
   }
 
-  if (isBirthdayToday && !fireworksMode && !chaserMode && !pixelTestMode) {
+  if (isBirthdayToday && !fireworksMode && !chaserMode && !pixelTestMode && !weatherMode) {
     if (rtc.getMinute() == birthdayFireworkMinute && rtc.getSecond() == 0 &&
         !fireworkTriggeredThisHour) {
       Serial.println(
@@ -200,6 +216,26 @@ void loop() {
       activeParticleCount = 0;
       clearLEDs(true);
     }
+  }
+
+  // --- Mise à jour Météo Périodique (toutes les 30 minutes) ---
+  if (weatherEnabled && (millis() - lastWeatherSync > 1800000 || lastWeatherSync == 0)) {
+      updateWeather();
+  }
+
+  // --- Animation Météo (à la minute 00) ---
+  if (weatherEnabled && !fireworksMode && !chaserMode && !pixelTestMode && !weatherMode) {
+      if (rtc.getMinute() == 0 && rtc.getSecond() == 0 && !weatherTriggeredThisHour) {
+          weatherTriggeredThisHour = true;
+          weatherMode = true;
+          weatherStartTime = millis();
+          clearLEDs(true);
+          Serial.println("🌤️ Lancement de l'animation météo horaire");
+      }
+  }
+  // Réarmement pour la prochaine heure
+  if (rtc.getMinute() > 0) {
+      weatherTriggeredThisHour = false;
   }
 
   // -------------------------------------------------------------------------
@@ -269,6 +305,16 @@ void loop() {
       fireworksMode = false;
       clearLEDs(true);
       Serial.println("Fireworks finished.");
+    }
+  } else if (weatherMode) {
+    // Animation météo (15 secondes)
+    if (millis() - weatherStartTime < 15000) {
+      renderWeatherAnimation();
+      FastLED.delay(50); // ~20 FPS
+    } else {
+      weatherMode = false;
+      clearLEDs(true);
+      Serial.println("Animation météo terminée.");
     }
   } else if (chaserMode) {
     runChaserFrame(); // Animation chenillard arc-en-ciel

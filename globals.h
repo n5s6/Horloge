@@ -23,6 +23,8 @@
 #include <WebServer.h>
 #include <Preferences.h>
 #include <time.h>
+#include <HTTPClient.h>
+#include <ArduinoJson.h>
 
 // =====================================================================================
 //  STRUCTURES DE DONNÉES — Animation feu d'artifice
@@ -82,7 +84,17 @@ extern bool apModeActive;           // true = mode Point d'Accès Wi-Fi (configu
 extern bool fireworksMode;          // true = animation feu d'artifice en cours
 extern bool chaserMode;             // true = animation chenillard en cours
 extern bool pixelTestMode;          // true = test LED une par une en cours
+extern bool weatherMode;            // true = animation météo en cours
 extern int testPixelIndex;          // Index courant pour les animations de test
+
+// --- Drapeaux d'état (Météo)
+extern bool weatherEnabled;
+extern String weatherApiKey;
+extern String weatherCity;
+extern int currentWeatherId;
+extern unsigned long lastWeatherSync;
+extern unsigned long weatherStartTime;
+extern bool weatherTriggeredThisHour;
 
 // --- Drapeaux d'état (Anniversaires)
 extern bool isBirthdayToday;

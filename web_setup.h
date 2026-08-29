@@ -3,6 +3,9 @@
 
 #include "globals.h"
 
+// Forward declaration pour la météo
+void updateWeather();
+
 // =====================================================================================
 // Déclarations
 // =====================================================================================
@@ -11,6 +14,7 @@ void resetDisplayModes() {
   fireworksMode = false;
   chaserMode = false;
   pixelTestMode = false;
+  weatherMode = false;
   clearLEDs(true);
 }
 
@@ -60,6 +64,79 @@ void handleClockMode() {
   resetDisplayModes();
   server.sendHeader("Location", "/status", true);
   server.send(302, "text/plain", "");
+}
+
+void handleWeatherTest() {
+  Serial.println("Test Animation Météo via le Web !");
+  resetDisplayModes();
+  weatherMode = true;
+  weatherStartTime = millis();
+  updateWeather(); // Force la màj
+  server.sendHeader("Location", "/status", true);
+  server.send(302, "text/plain", "");
+}
+
+// =====================================================================================
+//  Endpoints API REST (Pour Home Assistant, etc.)
+// =====================================================================================
+
+void handleApiStatus() {
+  JsonDocument doc;
+  String mode = "clock";
+  if (fireworksMode) mode = "fireworks";
+  else if (weatherMode) mode = "weather";
+  else if (chaserMode) mode = "chaser";
+  else if (pixelTestMode) mode = "pixeltest";
+  
+  doc["mode"] = mode;
+  doc["brightness"] = FastLED.getBrightness();
+  doc["wifi_ssid"] = WiFi.SSID();
+  doc["ip"] = WiFi.localIP().toString();
+  
+  String response;
+  serializeJson(doc, response);
+  server.send(200, "application/json", response);
+}
+
+void handleApiFireworks() {
+  Serial.println("API: Déclenchement Feu d'artifice");
+  resetDisplayModes();
+  fireworksMode = true;
+  fireworksStartTime = millis();
+  for (int i = 0; i < MAX_ROCKETS; ++i) rockets[i].active = false;
+  for (int i = 0; i < MAX_TOTAL_PARTICLES; ++i) particles[i].active = false;
+  activeParticleCount = 0;
+  server.send(200, "application/json", "{\"status\":\"ok\",\"mode\":\"fireworks\"}");
+}
+
+void handleApiWeather() {
+  Serial.println("API: Déclenchement Météo");
+  resetDisplayModes();
+  weatherMode = true;
+  weatherStartTime = millis();
+  updateWeather(); 
+  server.send(200, "application/json", "{\"status\":\"ok\",\"mode\":\"weather\"}");
+}
+
+void handleApiClock() {
+  Serial.println("API: Retour au mode horloge");
+  resetDisplayModes();
+  server.send(200, "application/json", "{\"status\":\"ok\",\"mode\":\"clock\"}");
+}
+
+void handleApiBrightness() {
+  if (server.hasArg("value")) {
+    int val = server.arg("value").toInt();
+    if (val < 10) val = 10;
+    if (val > 250) val = 250;
+    brightness = val;
+    preferences.putInt("brightness", brightness);
+    FastLED.setBrightness(brightness);
+    updateLEDs();
+    server.send(200, "application/json", "{\"status\":\"ok\",\"brightness\":" + String(brightness) + "}");
+  } else {
+    server.send(400, "application/json", "{\"status\":\"error\",\"message\":\"Paramètre 'value' manquant (10-250)\"}");
+  }
 }
 
 String crgbToHex(CRGB color) {
@@ -123,6 +200,8 @@ void handleStatus() {
   String modeStr = "Horloge";
   if (fireworksMode)
     modeStr = "Feu d'artifice";
+  else if (weatherMode)
+    modeStr = "Météo";
   else if (chaserMode)
     modeStr = "Chenillard";
   else if (pixelTestMode)
@@ -174,6 +253,11 @@ void handleStatus() {
   footer += "<form action=\"/fireworks\" method=\"POST\" "
             "style=\"margin-bottom: 5px;\"><input type=\"submit\" value=\"🎆 "
             "Lancer Feu d'artifice\" style=\"background-color:#ff5722; "
+            "color:#fff; border:none; padding:10px 20px; border-radius:5px; "
+            "cursor:pointer; font-weight:bold; width:100%;\"></form>";
+  footer += "<form action=\"/weathertest\" method=\"POST\" "
+            "style=\"margin-bottom: 5px;\"><input type=\"submit\" value=\"🌤️ "
+            "Tester Animation Météo\" style=\"background-color:#3498db; "
             "color:#fff; border:none; padding:10px 20px; border-radius:5px; "
             "cursor:pointer; font-weight:bold; width:100%;\"></form>";
   footer += "<form action=\"/chaser\" method=\"POST\" style=\"margin-bottom: "
@@ -272,6 +356,23 @@ void handleRoot() {
       R"rawliteral(" oninput="document.getElementById('brightnessValue').innerText = this.value + '%'">
             </div>
             <hr>
+            <h2>Météo (OpenWeatherMap)</h2>
+            <div class="input-group" style="flex-direction: row; align-items: center; gap: 10px;">
+                <input type="checkbox" id="weatherEnabled" name="weatherEnabled" )rawliteral" +
+      (weatherEnabled ? "checked" : "") + R"rawliteral(>
+                <label for="weatherEnabled" style="margin-bottom:0;">Activer l'animation météo horaire</label>
+            </div>
+            <div class="input-group">
+                <label for="weatherCity">Ville (ex: Paris,FR)</label>
+                <input type="text" id="weatherCity" name="weatherCity" value=")rawliteral" +
+      weatherCity + R"rawliteral(">
+            </div>
+            <div class="input-group">
+                <label for="weatherApiKey">Clé API OpenWeatherMap</label>
+                <input type="text" id="weatherApiKey" name="weatherApiKey" value=")rawliteral" +
+      weatherApiKey + R"rawliteral(">
+            </div>
+            <hr>
             <h2>Couleurs par Heure</h2>
 )rawliteral";
 
@@ -317,6 +418,7 @@ void handleRoot() {
         <hr>
         <h2>Tests & Animations</h2>
         <form action="/fireworks" method="POST" style="margin-bottom: 5px;"><input type="submit" value="🎆 Lancer Feu d'Artifice" style="background-color: #ff5722; width: 100%; border:none; padding:10px; border-radius:5px; color:#fff; cursor:pointer; font-weight:bold;"></form>
+        <form action="/weathertest" method="POST" style="margin-bottom: 5px;"><input type="submit" value="🌤️ Tester Animation Météo" style="background-color: #3498db; width: 100%; border:none; padding:10px; border-radius:5px; color:#fff; cursor:pointer; font-weight:bold;"></form>
         <form action="/chaser" method="POST" style="margin-bottom: 5px;"><input type="submit" value="🔄 Lancer Chenillard" style="background-color: #9c27b0; width: 100%; border:none; padding:10px; border-radius:5px; color:#fff; cursor:pointer; font-weight:bold;"></form>
         <form action="/pixeltest" method="POST" style="margin-bottom: 5px;"><input type="submit" value="🔍 Test Case par Case" style="background-color: #00bcd4; width: 100%; border:none; padding:10px; border-radius:5px; color:#fff; cursor:pointer; font-weight:bold;"></form>
         <form action="/clock" method="POST"><input type="submit" value="⏱️ Retour Mode Horloge" style="background-color: #4caf50; width: 100%; border:none; padding:10px; border-radius:5px; color:#fff; cursor:pointer; font-weight:bold;"></form>
@@ -362,6 +464,17 @@ void handleSaveConfig() {
     preferences.putInt("brightness", brightnessValue);
     Serial.println("Brightness saved: " + String(brightnessValue));
   }
+
+  // Sauvegarde de la météo
+  bool wEnabled = server.hasArg("weatherEnabled");
+  preferences.putBool("weatherEnabled", wEnabled);
+  if (server.hasArg("weatherCity")) {
+    preferences.putString("weatherCity", server.arg("weatherCity"));
+  }
+  if (server.hasArg("weatherApiKey")) {
+    preferences.putString("weatherApiKey", server.arg("weatherApiKey"));
+  }
+  Serial.println("Weather config saved. Enabled: " + String(wEnabled));
 
   // Sauvegarde des anniversaires
   for (int i = 0; i < 10; i++) {
@@ -439,9 +552,18 @@ void startAPMode() {
   server.on("/saveconfig", HTTP_POST, handleSaveConfig);
   server.on("/status", HTTP_GET, handleStatus);
   server.on("/fireworks", HTTP_POST, handleFireworks);
+  server.on("/weathertest", HTTP_POST, handleWeatherTest);
   server.on("/chaser", HTTP_POST, handleChaser);
   server.on("/pixeltest", HTTP_POST, handlePixelTest);
   server.on("/clock", HTTP_POST, handleClockMode);
+
+  // Routes API
+  server.on("/api/status", HTTP_ANY, handleApiStatus);
+  server.on("/api/fireworks", HTTP_ANY, handleApiFireworks);
+  server.on("/api/weather", HTTP_ANY, handleApiWeather);
+  server.on("/api/clock", HTTP_ANY, handleApiClock);
+  server.on("/api/brightness", HTTP_ANY, handleApiBrightness);
+
   server.begin();
   Serial.println(
       "HTTP server started. Open http://192.168.4.1 in your browser.");
@@ -498,9 +620,18 @@ void connectToWiFi() {
       server.on("/saveconfig", HTTP_POST, handleSaveConfig);
       server.on("/status", HTTP_GET, handleStatus);
       server.on("/fireworks", HTTP_POST, handleFireworks);
+      server.on("/weathertest", HTTP_POST, handleWeatherTest);
       server.on("/chaser", HTTP_POST, handleChaser);
       server.on("/pixeltest", HTTP_POST, handlePixelTest);
       server.on("/clock", HTTP_POST, handleClockMode);
+
+      // Routes API
+      server.on("/api/status", HTTP_ANY, handleApiStatus);
+      server.on("/api/fireworks", HTTP_ANY, handleApiFireworks);
+      server.on("/api/weather", HTTP_ANY, handleApiWeather);
+      server.on("/api/clock", HTTP_ANY, handleApiClock);
+      server.on("/api/brightness", HTTP_ANY, handleApiBrightness);
+
       server.begin();
       Serial.println("Serveur web démarré sur le réseau local.");
     } else {

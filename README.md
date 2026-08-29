@@ -153,7 +153,10 @@ Deux bibliothèques sont nécessaires. Pour chacune :
 | **USB CDC On Boot** | `Enabled` | Active le moniteur série via USB natif |
 | **Upload Speed** | `921600` | Vitesse de téléversement maximale stable |
 | **Flash Size** | `4MB (32Mb)` | Taille standard pour la plupart des modules ESP32-C3 |
-| **Partition Scheme** | `Default 4MB with spiffs` | Schéma de partitionnement standard |
+| **Partition Scheme** | `Huge APP (3MB No OTA / 1MB SPIFFS)` | **Indispensable :** Libère assez de mémoire pour stocker le code de la météo |
+
+> **⚠️ Erreur "Sketch too big" ?**
+> Si la compilation échoue par manque d'espace (`text section exceeds available space`), c'est que vous avez oublié de modifier le **Partition Scheme** en `Huge APP (3MB...)` dans le menu Outils. L'horloge avec la météo nécessite plus d'1.2 Mo d'espace par défaut.
 
 ### Étape 6 — Connecter l'ESP32-C3
 
@@ -293,6 +296,52 @@ Via l'interface web, vous pouvez configurer jusqu'à 10 dates d'anniversaires au
 Lors d'un jour d'anniversaire :
 - Un feu d'artifice se déclenche automatiquement **une fois par heure**.
 - La minute de déclenchement (entre 0 et 59) est **tirée au sort** au début de chaque heure, rendant l'événement totalement imprévisible et surprenant !
+
+### 🌤️ Animations Météo (OpenWeatherMap)
+
+L'horloge peut afficher la météo locale (soleil, pluie, neige, orage, nuages...) sous forme d'une courte animation de 15 secondes **à chaque heure pile** (minute 00).
+
+**Pour configurer cette fonctionnalité :**
+1. Créez un compte gratuit sur [OpenWeatherMap](https://openweathermap.org/)
+2. Allez dans la section **API Keys** de votre compte et générez une clé (ou copiez la clé par défaut)
+3. Ouvrez l'interface web de votre horloge
+4. Dans la section **Météo**, cochez **Activer l'animation météo**
+5. Entrez votre clé API
+6. Entrez votre ville au format `Ville,Pays` (ex: `Paris,FR` ou `Lyon,FR`)
+7. Cliquez sur **Enregistrer & Redémarrer**
+
+*Note : Les données météo sont actualisées automatiquement toutes les 30 minutes.*
+
+---
+
+## 🤖 API REST (Intégration Domotique)
+
+L'horloge expose une petite API REST locale (format JSON) permettant de l'intégrer facilement dans des systèmes domotiques comme **Home Assistant** ou Jeedom.
+
+| Endpoint | Méthode | Description | Réponse |
+|---|---|---|---|
+| `/api/status` | `GET` | Retourne l'état actuel (mode, luminosité, réseau) | `{"mode":"clock", "brightness":150, "ip":"..."}` |
+| `/api/fireworks` | `POST` | Lance l'animation feu d'artifice (30s) | `{"status":"ok", "mode":"fireworks"}` |
+| `/api/weather` | `POST` | Lance l'animation météo (15s) | `{"status":"ok", "mode":"weather"}` |
+| `/api/clock` | `POST` | Force le retour immédiat à l'horloge | `{"status":"ok", "mode":"clock"}` |
+| `/api/brightness` | `POST` | Change la luminosité via le paramètre `?value=X` (10-250) | `{"status":"ok", "brightness":120}` |
+
+**Exemple d'intégration Home Assistant (`configuration.yaml`) :**
+```yaml
+rest_command:
+  horloge_fireworks:
+    url: "http://<IP_HORLOGE>/api/fireworks"
+    method: post
+  horloge_brightness:
+    url: "http://<IP_HORLOGE>/api/brightness?value={{ brightness }}"
+    method: post
+
+sensor:
+  - platform: rest
+    name: "Statut Horloge"
+    resource: "http://<IP_HORLOGE>/api/status"
+    value_template: "{{ value_json.mode }}"
+```
 
 ---
 
