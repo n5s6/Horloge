@@ -25,12 +25,23 @@
  */
 void launchRocket()
 {
+    static int last_rocket_x = -1;
     for (int i = 0; i < MAX_ROCKETS; ++i)
     {
         if (!rockets[i].active)
         {
             rockets[i].active = true;
-            rockets[i].x = random(GRID_WIDTH / 4, GRID_WIDTH * 3 / 4);      // Colonne aléatoire (zone centrale)
+            
+            int new_x;
+            int attempts = 0;
+            do {
+                new_x = random(GRID_WIDTH / 4, GRID_WIDTH * 3 / 4);      // Colonne aléatoire (zone centrale)
+                attempts++;
+            } while (last_rocket_x != -1 && abs(new_x - last_rocket_x) <= 2 && attempts < 10);
+            
+            last_rocket_x = new_x;
+            rockets[i].x = new_x;
+            
             rockets[i].y = GRID_HEIGHT - 1;                                  // Part du bas de la grille
             rockets[i].target_y = random(GRID_HEIGHT / 4, GRID_HEIGHT / 2);  // Explose dans le tiers supérieur
             rockets[i].color = CHSV(random8(), 255, 255);                    // Couleur HSV aléatoire saturée
