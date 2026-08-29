@@ -211,7 +211,7 @@ const int miam_PGM[4]          PROGMEM = {104, 105, 106, 107};                  
 const int midnightZero_PGM[11] PROGMEM = {45, 46, 65, 66, 67, 88, 89, 90, 91, 92, 93};    // "IL EST MINUIT"
 const int midnight_PGM[6]      PROGMEM = {93, 92, 91, 90, 89, 88};                         // "MINUIT"
 const int gouter_PGM[6]        PROGMEM = {125, 126, 127, 128, 129, 130};                    // "GOÛTER" (affiché à 16h)
-const int apero_PGM[5]         PROGMEM = {27, 50, 68, 101, 127};                            // "APERO" (affiché à 18h selon les jours)
+const int apero_PGM[5]         PROGMEM = {26, 49, 67, 100, 126};                            // "APERO" (affiché à 18h selon les jours)
 
 // --- Mot affiché pendant le réglage de luminosité ---
 const int displayBrightness_PGM[17] PROGMEM = {16, 17, 18, 30, 48, 49, 53, 72, 73, 78, 79, 106, 107, 108, 109, 110, 111};
