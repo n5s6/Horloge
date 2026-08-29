@@ -15,7 +15,18 @@
 // =====================================================================================
 
 #include "config.h"
+
+// --- ANTI-ARTEFACTS VISUELS (HACK Wi-Fi / ESP32) ---
+// Le protocole des LEDs (SK6812/WS2812) requiert un timing extrêmement strict.
+// Or, le Wi-Fi de l'ESP32 génère des interruptions matérielles imprévisibles.
+// Si une interruption tombe pendant un "FastLED.show()", le signal LED est corrompu
+// et provoque des artefacts visuels (flashs verts, blancs ou rouges aléatoires).
+// En mettant cette variable à 0, FastLED bloque TOUTES les interruptions pendant
+// l'envoi des données au ruban. Cela garantit un affichage parfait.
+// Contrepartie : on ne doit pas rafraîchir l'horloge en boucle trop rapidement
+// (cf. displayUpdateInterval = 30000) sinon le module Wi-Fi crashera.
 #define FASTLED_ALLOW_INTERRUPTS 0
+
 #include <FastLED.h>
 #include <ESP32Time.h>
 #include <pgmspace.h>
