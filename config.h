@@ -37,7 +37,7 @@ const unsigned long displayUpdateInterval = 1000; // Rafraîchissement de l'affi
 #define GRID_HEIGHT 12        // Hauteur de la grille virtuelle (lignes)
 
 #define MAX_ROCKETS                 2   // Nombre max de fusées simultanées
-#define MAX_PARTICLES_PER_EXPLOSION 10  // Particules par explosion
+#define MAX_PARTICLES_PER_EXPLOSION 5  // Particules par explosion
 #define MAX_TOTAL_PARTICLES (MAX_ROCKETS * MAX_PARTICLES_PER_EXPLOSION)
 
 const unsigned long FIREWORKS_DURATION_MS = 30000; // Durée de l'animation (30 secondes)
