@@ -356,6 +356,14 @@ Les couleurs sont modifiables :
 - Via l'**interface web** (sélecteurs de couleur visuels)
 - En modifiant le tableau `defaultColors_PGM` dans `globals.h` (valeurs par défaut)
 
+### 💡 Conseils pour de belles couleurs
+Pour que votre horloge soit agréable à lire et esthétique, voici quelques règles d'or :
+- **Ne choisissez jamais une couleur pure à 100%** (ex: Rouge `#FF0000` ou Bleu `#0000FF`). Sur des LEDs, cela "bave" et agresse l'œil. Privilégiez des tons pastel ou désaturés.
+- **Créez un dégradé logique** : La couleur de progression doit idéalement être une nuance adjacente à la couleur de base sur le cercle chromatique (ex: passer d'un Rose pâle à un Jaune crème).
+- **Jouez avec les moments de la journée** : Tons froids/bleutés le matin, couleurs chaudes (jaune/orange) le midi, et des tons profonds (violet/prune/bleu nuit) le soir pour ne pas éblouir.
+
+**Outil recommandé :** Utilisez le site [Coolors.co](https://coolors.co/) ou [Adobe Color](https://color.adobe.com/) pour générer des palettes harmonieuses (choisissez l'option "Analogue" pour des couleurs qui se marient bien entre le début et la fin de l'heure).
+
 ---
 
 ## 🔌 Détails Techniques
