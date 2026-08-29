@@ -69,18 +69,18 @@ void renderWeatherAnimation() {
     if (currentWeatherId >= 200 && currentWeatherId < 300) {
         // --- ORAGE (Éclairs) ---
         // Fond nuageux (gris bleuté très sombre)
-        for (int i = 0; i < NUM_LEDS; i++) leds[i] = CRGB(5, 5, 10);
+        for (int i = 0; i < NUM_LEDS; i++) leds[i] = CRGB(2, 2, 8);
         
-        // Éclairs aléatoires
-        if (random8() < 15) { // Probabilité d'éclair
-            int lightningSize = random(10, 40);
+        // Éclairs frénétiques
+        int lightningChance = (elapsed % 3000 < 500) ? 80 : 5; // Salves d'éclairs toutes les 3 secondes
+        if (random8() < lightningChance) {
+            int lightningSize = random(10, 60);
             for (int i = 0; i < lightningSize; i++) {
-                int randomLed = random(NUM_LEDS/2); // index logique
-                setPixelPair(randomLed, CRGB::White);
+                int randomLed = random(NUM_LEDS/2); 
+                setPixelPair(randomLed, CRGB(200, 220, 255)); // Blanc bleuté intense
             }
-            if (random8() < 50) { // flash intense global occasionnel
-                fill_solid((CRGB*)&leds[0], NUM_LEDS * 4 / 3, CRGB::White); 
-                // Attention fill_solid utilise les CRGB raw, NUM_LEDS * 4/3 pour SK6812 hack
+            if (random8() < 80) { // Gros flash très fréquent pendant la salve
+                fill_solid((CRGB*)&leds[0], NUM_LEDS * 4 / 3, CRGB(180, 200, 255)); 
             }
         }
     } 
@@ -93,17 +93,17 @@ void renderWeatherAnimation() {
         // Au lieu de fadeToBlackBy (complexe avec le hack RGBW), 
         // on va juste générer de nouvelles gouttes aléatoires
         
-        // Simuler le déplacement vers le bas : on efface tout à chaque frame et on recalcule
-        // On utilise l'heure (elapsed) pour faire glisser les gouttes
+        // Simuler le déplacement vers le bas
         for (int x = 0; x < GRID_WIDTH; x++) {
             // Créer une pluie décalée pour chaque colonne
-            int yOffset = (elapsed / 40 + x * 7) % (GRID_HEIGHT * 2);
+            int yOffset = (elapsed / 30 + x * 7) % (GRID_HEIGHT * 2);
             for (int y = 0; y < GRID_HEIGHT; y++) {
-                // Si la goutte passe par cette coordonnée
-                if ((y + yOffset) % 15 == 0) {
+                // y - yOffset pour faire tomber du haut vers le bas
+                int yPos = (y - yOffset + GRID_HEIGHT * 2) % 15;
+                if (yPos == 0) {
                      int idx = xy_map(x, y);
-                     if (idx != -1) setPixelPair(idx, CRGB(0, 50, 255));
-                } else if ((y + yOffset) % 15 == 1) { // Traînée de la goutte
+                     if (idx != -1) setPixelPair(idx, CRGB(0, 80, 255));
+                } else if (yPos == 1 || yPos == 2) { // Traînée de la goutte plus longue
                      int idx = xy_map(x, y);
                      if (idx != -1) setPixelPair(idx, CRGB(0, 20, 100));
                 }
@@ -114,12 +114,13 @@ void renderWeatherAnimation() {
         // --- NEIGE ---
         // Particules blanches qui tombent très lentement et oscillent
         for (int x = 0; x < GRID_WIDTH; x++) {
-            int yOffset = (elapsed / 150 + x * 3) % (GRID_HEIGHT * 3);
+            int yOffset = (elapsed / 150 + x * 5) % (GRID_HEIGHT * 3);
             for (int y = 0; y < GRID_HEIGHT; y++) {
-                if ((y + yOffset) % 20 == 0) {
+                int yPos = (y - yOffset + GRID_HEIGHT * 3) % 20;
+                if (yPos == 0) {
                     // Oscillation gauche-droite
                     int wobbleX = x;
-                    if (elapsed / 500 % 2 == 0) wobbleX = (x + 1) % GRID_WIDTH;
+                    if (elapsed / 300 % 2 == 0) wobbleX = (x + 1) % GRID_WIDTH;
                     
                     int idx = xy_map(wobbleX, y);
                     if (idx != -1) setPixelPair(idx, CRGB(200, 200, 255)); // Blanc bleuté
@@ -129,33 +130,50 @@ void renderWeatherAnimation() {
     }
     else if (currentWeatherId >= 700 && currentWeatherId < 800) {
         // --- BROUILLARD ---
-        // Vagues douces de gris pâle
-        float breath = (sin(elapsed * 0.002) + 1.0) / 2.0; // 0.0 à 1.0
-        CRGB fogColor = CRGB(
-            20 + breath * 30, 
-            20 + breath * 30, 
-            25 + breath * 35
-        );
-        for (int i = 0; i < (NUM_LEDS/2); i++) {
-            setPixelPair(i, fogColor);
+        // Volutes de brouillard plus denses, rapides et contrastées
+        for (int x = 0; x < GRID_WIDTH; x++) {
+            for (int y = 0; y < GRID_HEIGHT; y++) {
+                // Double onde croisée plus rapide pour simuler des volutes de fumée
+                float wave1 = sin((x + elapsed * 0.004) * 0.6 + y * 0.3);
+                float wave2 = cos((y - elapsed * 0.003) * 0.7 + x * 0.4);
+                float intensity = (wave1 + wave2 + 2.0) / 4.0; // Normalisé entre 0.0 et 1.0
+                
+                // Contraste augmenté : de gris très foncé à gris/blanc bleuté bien visible
+                CRGB fogColor = CRGB(
+                    10 + intensity * 120, 
+                    10 + intensity * 120, 
+                    15 + intensity * 140
+                );
+                int idx = xy_map(x, y);
+                if (idx != -1) setPixelPair(idx, fogColor);
+            }
         }
     }
     else if (currentWeatherId == 800) {
         // --- SOLEIL ---
-        // Centre jaune, bords qui respirent
+        // Cœur petit, grands rayons tournants ou pulsatiles
         int centerX = GRID_WIDTH / 2;
         int centerY = GRID_HEIGHT / 2;
-        float pulse = (sin(elapsed * 0.003) + 1.0) / 2.0; // 0.0 à 1.0
+        float pulse = (sin(elapsed * 0.004) + 1.0) / 2.0;
         
         for (int x = 0; x < GRID_WIDTH; x++) {
             for (int y = 0; y < GRID_HEIGHT; y++) {
                 float dist = sqrt(pow(x - centerX, 2) + pow(y - centerY, 2));
                 int idx = xy_map(x, y);
                 if (idx != -1) {
-                    if (dist < 2.5) {
-                        setPixelPair(idx, CRGB(255, 200, 0)); // Coeur brillant
-                    } else if (dist < 4.5 + pulse * 1.5) {
-                        setPixelPair(idx, CRGB(100 + pulse*50, 50 + pulse*30, 0)); // Halo
+                    if (dist < 1.5) {
+                        // Petit cœur très brillant
+                        setPixelPair(idx, CRGB(255, 220, 0)); 
+                    } 
+                    else if (dist < 2.5) {
+                        // Halo proche
+                        setPixelPair(idx, CRGB(150, 80, 0));
+                    }
+                    else if ((x == centerX || y == centerY || x == y || x == (GRID_HEIGHT - 1 - y)) && dist < 5.5 + pulse * 1.5) {
+                        // Rayons qui s'étirent (croix et diagonales)
+                        int brightness = 80 - dist * 10 + pulse * 40;
+                        if (brightness < 0) brightness = 0;
+                        setPixelPair(idx, CRGB(brightness, brightness * 0.6, 0));
                     }
                 }
             }
@@ -163,11 +181,12 @@ void renderWeatherAnimation() {
     }
     else if (currentWeatherId > 800) {
         // --- NUAGES ---
-        // Massifs gris/blanc qui défilent de gauche à droite
-        int xOffset = (elapsed / 200) % GRID_WIDTH;
+        // Massifs gris/blanc qui défilent de GAUCHE à DROITE
+        int xOffset = (elapsed / 250) % GRID_WIDTH;
         for (int x = 0; x < GRID_WIDTH; x++) {
             for (int y = 0; y < GRID_HEIGHT; y++) {
-                int shiftedX = (x + xOffset) % GRID_WIDTH;
+                // x - xOffset pour un défilement de gauche à droite
+                int shiftedX = (x - xOffset + GRID_WIDTH * 2) % GRID_WIDTH;
                 int idx = xy_map(x, y);
                 if (idx != -1) {
                     // Forme de nuage basique via une formule simple
