@@ -30,7 +30,7 @@ const unsigned long BRIGHTNESS_PRESS_DURATION_MS = 3000;  // Appui court → ré
 const unsigned long FIREWORKS_PRESS_DURATION_MS  = 5000;  // Appui long  → feu d'artifice
 
 // --- Horloge ---
-const unsigned long displayUpdateInterval = 1000; // Rafraîchissement de l'affichage (en ms)
+const unsigned long displayUpdateInterval = 30000; // Rafraîchissement de l'affichage (en ms) — 30 secondes pour minimiser les conflits Wi-Fi
 
 // --- Animation Feu d'Artifice ---
 #define GRID_WIDTH  12        // Largeur de la grille virtuelle (colonnes)
