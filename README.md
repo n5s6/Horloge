@@ -299,7 +299,7 @@ Lors d'un jour d'anniversaire :
 
 ### 🌤️ Animations Météo (OpenWeatherMap)
 
-L'horloge peut afficher la météo locale (soleil, pluie, neige, orage, nuages...) sous forme d'une courte animation de 15 secondes **à chaque heure pile** (minute 00).
+L'horloge peut afficher la météo locale (soleil/lune la nuit, pluie, neige, orage, nuages...) sous forme d'une courte animation de 15 secondes **à chaque heure pile** (minute 00).
 
 **Pour configurer cette fonctionnalité :**
 1. Créez un compte gratuit sur [OpenWeatherMap](https://openweathermap.org/)

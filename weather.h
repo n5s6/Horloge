@@ -150,30 +150,60 @@ void renderWeatherAnimation() {
         }
     }
     else if (currentWeatherId == 800) {
-        // --- SOLEIL ---
-        // Cœur petit, grands rayons tournants ou pulsatiles
-        int centerX = GRID_WIDTH / 2;
-        int centerY = GRID_HEIGHT / 2;
-        float pulse = (sin(elapsed * 0.004) + 1.0) / 2.0;
-        
-        for (int x = 0; x < GRID_WIDTH; x++) {
-            for (int y = 0; y < GRID_HEIGHT; y++) {
-                float dist = sqrt(pow(x - centerX, 2) + pow(y - centerY, 2));
-                int idx = xy_map(x, y);
-                if (idx != -1) {
-                    if (dist < 1.5) {
-                        // Petit cœur très brillant
-                        setPixelPair(idx, CRGB(255, 220, 0)); 
-                    } 
-                    else if (dist < 2.5) {
-                        // Halo proche
-                        setPixelPair(idx, CRGB(150, 80, 0));
+        int hour = rtc.getHour(true);
+        bool isNight = (hour < 6 || hour >= 20);
+
+        if (isNight) {
+            // --- LUNE ---
+            // Croissant de lune en soustrayant deux cercles
+            int centerX = GRID_WIDTH / 2;
+            int centerY = GRID_HEIGHT / 2;
+            
+            for (int x = 0; x < GRID_WIDTH; x++) {
+                for (int y = 0; y < GRID_HEIGHT; y++) {
+                    float dist1 = sqrt(pow(x - centerX, 2) + pow(y - centerY, 2));
+                    // Décaler le centre du deuxième cercle (le "trou" ou l'ombre)
+                    float dist2 = sqrt(pow(x - (centerX - 1.5), 2) + pow(y - (centerY - 1.5), 2));
+                    
+                    int idx = xy_map(x, y);
+                    if (idx != -1) {
+                        // Le croissant est la zone dans le premier cercle MAIS hors du deuxième
+                        if (dist1 < 3.5 && dist2 >= 3.0) {
+                            setPixelPair(idx, CRGB(200, 220, 255)); // Blanc bleuté pour la lune
+                        } 
+                        else if (dist1 < 4.5 && dist2 >= 2.5) {
+                            // Halo autour
+                            setPixelPair(idx, CRGB(20, 30, 60));
+                        }
                     }
-                    else if ((x == centerX || y == centerY || x == y || x == (GRID_HEIGHT - 1 - y)) && dist < 5.5 + pulse * 1.5) {
-                        // Rayons qui s'étirent (croix et diagonales)
-                        int brightness = 80 - dist * 10 + pulse * 40;
-                        if (brightness < 0) brightness = 0;
-                        setPixelPair(idx, CRGB(brightness, brightness * 0.6, 0));
+                }
+            }
+        } else {
+            // --- SOLEIL ---
+            // Cœur petit, grands rayons tournants ou pulsatiles
+            int centerX = GRID_WIDTH / 2;
+            int centerY = GRID_HEIGHT / 2;
+            float pulse = (sin(elapsed * 0.004) + 1.0) / 2.0;
+            
+            for (int x = 0; x < GRID_WIDTH; x++) {
+                for (int y = 0; y < GRID_HEIGHT; y++) {
+                    float dist = sqrt(pow(x - centerX, 2) + pow(y - centerY, 2));
+                    int idx = xy_map(x, y);
+                    if (idx != -1) {
+                        if (dist < 1.5) {
+                            // Petit cœur très brillant
+                            setPixelPair(idx, CRGB(255, 220, 0)); 
+                        } 
+                        else if (dist < 2.5) {
+                            // Halo proche
+                            setPixelPair(idx, CRGB(150, 80, 0));
+                        }
+                        else if ((x == centerX || y == centerY || x == y || x == (GRID_HEIGHT - 1 - y)) && dist < 5.5 + pulse * 1.5) {
+                            // Rayons qui s'étirent (croix et diagonales)
+                            int brightness = 80 - dist * 10 + pulse * 40;
+                            if (brightness < 0) brightness = 0;
+                            setPixelPair(idx, CRGB(brightness, brightness * 0.6, 0));
+                        }
                     }
                 }
             }
