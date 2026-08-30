@@ -149,95 +149,83 @@ void renderWeatherAnimation() {
             }
         }
     }
-    else if (currentWeatherId == 800) {
+    else if (currentWeatherId >= 800) {
         int hour = rtc.getHour(true);
         bool isNight = (hour < 6 || hour >= 20);
 
-        if (isNight) {
-            // --- LUNE ---
-            // Croissant de lune en soustrayant deux cercles
+        // 1. DESSIN DE L'ARRIERE PLAN (Lune ou Soleil) - uniquement pour 800, 801, 802
+        if (currentWeatherId <= 802) {
             int centerX = GRID_WIDTH / 2;
             int centerY = GRID_HEIGHT / 2;
-            
+            float pulse = (sin(elapsed * 0.004) + 1.0) / 2.0;
+
             for (int x = 0; x < GRID_WIDTH; x++) {
                 for (int y = 0; y < GRID_HEIGHT; y++) {
-                    float dist1 = sqrt(pow(x - centerX, 2) + pow(y - centerY, 2));
-                    // Décaler le centre du deuxième cercle (le "trou" ou l'ombre)
-                    float dist2 = sqrt(pow(x - (centerX - 1.5), 2) + pow(y - (centerY - 1.5), 2));
-                    
                     int idx = xy_map(x, y);
                     if (idx != -1) {
-                        // Le croissant est la zone dans le premier cercle MAIS hors du deuxième
-                        if (dist1 < 3.5 && dist2 >= 3.0) {
-                            setPixelPair(idx, CRGB(200, 220, 255)); // Blanc bleuté pour la lune
-                        } 
-                        else if (dist1 < 4.5 && dist2 >= 2.5) {
-                            // Halo autour
-                            setPixelPair(idx, CRGB(20, 30, 60));
-                        }
-                        else {
-                            // Étoiles scintillantes
-                            // Génération pseudo-aléatoire basée sur la position (x, y) pour avoir des étoiles fixes
-                            int starSeed = (x * 13 + y * 27) % 100;
-                            if (starSeed > 92) { // ~8% de chances d'avoir une étoile
-                                // Scintillement fluide basé sur le temps
-                                float twinkle = (sin(elapsed * 0.003 + starSeed) + 1.0) / 2.0;
-                                int starBrightness = twinkle * 150; // Pas trop lumineux
-                                setPixelPair(idx, CRGB(starBrightness, starBrightness, starBrightness + 20)); // Légèrement bleuté
+                        if (isNight) {
+                            // --- LUNE ---
+                            float dist1 = sqrt(pow(x - centerX, 2) + pow(y - centerY, 2));
+                            float dist2 = sqrt(pow(x - (centerX - 1.5), 2) + pow(y - (centerY - 1.5), 2));
+                            
+                            if (dist1 < 3.5 && dist2 >= 3.0) {
+                                setPixelPair(idx, CRGB(200, 220, 255)); // Blanc bleuté pour la lune
+                            } 
+                            else if (dist1 < 4.5 && dist2 >= 2.5) {
+                                setPixelPair(idx, CRGB(20, 30, 60)); // Halo
+                            }
+                            else {
+                                // Étoiles scintillantes
+                                int starSeed = (x * 13 + y * 27) % 100;
+                                if (starSeed > 92) {
+                                    float twinkle = (sin(elapsed * 0.003 + starSeed) + 1.0) / 2.0;
+                                    int starBrightness = twinkle * 150;
+                                    setPixelPair(idx, CRGB(starBrightness, starBrightness, starBrightness + 20));
+                                }
+                            }
+                        } else {
+                            // --- SOLEIL ---
+                            float dist = sqrt(pow(x - centerX, 2) + pow(y - centerY, 2));
+                            
+                            if (dist < 1.5) {
+                                setPixelPair(idx, CRGB(255, 220, 0)); // Cœur brillant
+                            } 
+                            else if (dist < 2.5) {
+                                setPixelPair(idx, CRGB(150, 80, 0)); // Halo
+                            }
+                            else if ((x == centerX || y == centerY || x == y || x == (GRID_HEIGHT - 1 - y)) && dist < 5.5 + pulse * 1.5) {
+                                // Rayons
+                                int brightness = 80 - dist * 10 + pulse * 40;
+                                if (brightness < 0) brightness = 0;
+                                setPixelPair(idx, CRGB(brightness, brightness * 0.6, 0));
                             }
                         }
                     }
                 }
             }
-        } else {
-            // --- SOLEIL ---
-            // Cœur petit, grands rayons tournants ou pulsatiles
-            int centerX = GRID_WIDTH / 2;
-            int centerY = GRID_HEIGHT / 2;
-            float pulse = (sin(elapsed * 0.004) + 1.0) / 2.0;
-            
+        }
+
+        // 2. DESSIN DES NUAGES (Au premier plan) - pour > 800
+        if (currentWeatherId > 800) {
+            int xOffset = (elapsed / 250) % GRID_WIDTH;
             for (int x = 0; x < GRID_WIDTH; x++) {
                 for (int y = 0; y < GRID_HEIGHT; y++) {
-                    float dist = sqrt(pow(x - centerX, 2) + pow(y - centerY, 2));
+                    int shiftedX = (x - xOffset + GRID_WIDTH * 2) % GRID_WIDTH;
                     int idx = xy_map(x, y);
+                    
                     if (idx != -1) {
-                        if (dist < 1.5) {
-                            // Petit cœur très brillant
-                            setPixelPair(idx, CRGB(255, 220, 0)); 
+                        // Nuages clairs
+                        if ((shiftedX > 2 && shiftedX < 8 && y > 3 && y < 7) || 
+                            (shiftedX > 4 && shiftedX < 10 && y > 2 && y < 6)) {
+                            // Vient écraser l'astre (soleil/lune) s'il y en a un en dessous
+                            setPixelPair(idx, CRGB(150, 150, 160)); 
                         } 
-                        else if (dist < 2.5) {
-                            // Halo proche
-                            setPixelPair(idx, CRGB(150, 80, 0));
+                        // Nuages supplémentaires plus foncés (seulement pour ciel très couvert > 802)
+                        else if (currentWeatherId > 802 && 
+                                  ((shiftedX < 4 && y > 5 && y < 9) || 
+                                   (shiftedX > 7 && y > 4 && y < 8))) {
+                            setPixelPair(idx, CRGB(80, 80, 90)); 
                         }
-                        else if ((x == centerX || y == centerY || x == y || x == (GRID_HEIGHT - 1 - y)) && dist < 5.5 + pulse * 1.5) {
-                            // Rayons qui s'étirent (croix et diagonales)
-                            int brightness = 80 - dist * 10 + pulse * 40;
-                            if (brightness < 0) brightness = 0;
-                            setPixelPair(idx, CRGB(brightness, brightness * 0.6, 0));
-                        }
-                    }
-                }
-            }
-        }
-    }
-    else if (currentWeatherId > 800) {
-        // --- NUAGES ---
-        // Massifs gris/blanc qui défilent de GAUCHE à DROITE
-        int xOffset = (elapsed / 250) % GRID_WIDTH;
-        for (int x = 0; x < GRID_WIDTH; x++) {
-            for (int y = 0; y < GRID_HEIGHT; y++) {
-                // x - xOffset pour un défilement de gauche à droite
-                int shiftedX = (x - xOffset + GRID_WIDTH * 2) % GRID_WIDTH;
-                int idx = xy_map(x, y);
-                if (idx != -1) {
-                    // Forme de nuage basique via une formule simple
-                    if ((shiftedX > 2 && shiftedX < 8 && y > 3 && y < 7) || 
-                        (shiftedX > 4 && shiftedX < 10 && y > 2 && y < 6)) {
-                        setPixelPair(idx, CRGB(150, 150, 160)); // Nuage blanc/gris
-                    } else if (currentWeatherId > 802 && // Très nuageux
-                              ((shiftedX < 4 && y > 5 && y < 9) || 
-                               (shiftedX > 7 && y > 4 && y < 8))) {
-                        setPixelPair(idx, CRGB(80, 80, 90)); // Nuages foncés
                     }
                 }
             }

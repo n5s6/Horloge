@@ -275,7 +275,9 @@ void handleStatus() {
             "cursor:pointer; font-weight:bold; width:100%;\"></form>";
   footer += "<form action=\"/weatherdebug\" method=\"POST\" style=\"margin-bottom: 5px; display:flex; gap:5px;\">"
             "<select name=\"weatherId\" style=\"flex:1; padding:10px; border-radius:5px; background:#444; color:#fff; border:1px solid #555; font-size:16px;\">"
-            "<option value=\"800\">☀️ Soleil</option><option value=\"802\">☁️ Nuages</option>"
+            "<option value=\"800\">☀️ Clair</option>"
+            "<option value=\"802\">🌤️ Peu Nuageux</option>"
+            "<option value=\"804\">☁️ Très Nuageux</option>"
             "<option value=\"500\">🌧️ Pluie</option><option value=\"600\">❄️ Neige</option>"
             "<option value=\"200\">🌩️ Orage</option><option value=\"741\">🌫️ Brouillard</option></select>"
             "<input type=\"submit\" value=\"Débug Météo\" style=\"background-color:#f39c12; color:#fff; border:none; padding:10px; border-radius:5px; cursor:pointer; font-weight:bold;\"></form>";
