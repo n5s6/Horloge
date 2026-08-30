@@ -175,6 +175,17 @@ void renderWeatherAnimation() {
                             // Halo autour
                             setPixelPair(idx, CRGB(20, 30, 60));
                         }
+                        else {
+                            // Étoiles scintillantes
+                            // Génération pseudo-aléatoire basée sur la position (x, y) pour avoir des étoiles fixes
+                            int starSeed = (x * 13 + y * 27) % 100;
+                            if (starSeed > 92) { // ~8% de chances d'avoir une étoile
+                                // Scintillement fluide basé sur le temps
+                                float twinkle = (sin(elapsed * 0.003 + starSeed) + 1.0) / 2.0;
+                                int starBrightness = twinkle * 150; // Pas trop lumineux
+                                setPixelPair(idx, CRGB(starBrightness, starBrightness, starBrightness + 20)); // Légèrement bleuté
+                            }
+                        }
                     }
                 }
             }
